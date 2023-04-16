@@ -39,7 +39,9 @@ def GenerateRandomF_agInput(num_timesteps=500, plot=False):
     return F_ag_random_sequence # (num_timesteps,)
 
 
-def generate_inputs (N):
+def generate_inputs (N, Cx_low = 5, Cx_high = 60, Cs_low = 5, Cs_high = 60, \
+                    T_in_low = 293, T_in_high = 308, T_inag_low = 293, T_inag_high = 308, \
+                    stable_initial_conditions = False):
     """
     Randomly generates N of [Cx0, Cp0, Cs0, Co20, Tr0, Tag0] initial conditions.
     Range of reasonable initial values are manually chosen in the function.
@@ -48,22 +50,28 @@ def generate_inputs (N):
     random_inputs: Array of random initial conditions (N,6)
 
     """
-    conc_range = [5, 60]     # 60 g/L given on page 99
-    temp_range = [293, 308]  # random in [298,350] K
+    Cx_range = [Cx_low, Cx_high]     # 60 g/L given on page 99
+    Cs_range = [Cs_low, Cs_high]     # 60 g/L given on page 99
+    T_in_range = [T_in_low, T_in_high]  # random in [298,350] K
+    T_inag_range = [T_inag_low, T_inag_high]  # random in [298,350] K
 
-    Cx_in = np.random.randint (*conc_range, size=(N,1))
-    Cs_in = np.random.randint (*conc_range, size=(N,1))
+    Cx_in = np.random.randint (*Cx_range, size=(N,1))
+    Cs_in = np.random.randint (*Cs_range, size=(N,1))
 
-    Cs_in = np.ones((N,1)) * 60 # 60 g/L given on page 99
-    cx_range = [0.5, 1.5]     # inferred from graphs on page 101
-    Cx_in = np.random.randint (*cx_range, size=(N,1))
 
-    # T_in = np.random.randint (*temp_range, size=(N,1))
-    # T_inag = np.random.randint (*temp_range, size=(N,1))
 
-    T_in = np.ones((N,1)) * 298 # given on page 99
-    T_inag = np.ones((N,1)) * 288 # given on page 99
-    
+    T_in = np.random.randint (*T_in_range, size=(N,1))
+    T_inag = np.random.randint (*T_inag_range, size=(N,1))
+
+
+    #### If we want to fix the initial conditions tighter, use the code below
+    if stable_initial_conditions == True:
+        T_in = np.ones((N,1)) * 298 # given on page 99
+        T_inag = np.ones((N,1)) * 288 # given on page 99
+        Cs_in = np.ones((N,1)) * 60 # 60 g/L given on page 99
+        cx_range = [0.5, 1.5]     # inferred from graphs on page 101
+        Cx_in = np.random.randint (*cx_range, size=(N,1))
+
     # Product starts with 0
     Cp_in = np.zeros ((N,1))
     Co2_in = np.zeros ((N,1))
