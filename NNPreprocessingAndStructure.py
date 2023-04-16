@@ -8,8 +8,8 @@ def data_preprocessing(dataset, batch_size = 1, shuffle = False):
     features = data[:, i:i+4].T # 0,1,2,3th states (4,6)
     label = data[:, i+4] # 4th states (6,)
     data_list.append ((features,label))
-    data_list = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle)
-  return data_list
+  data_list_ready_for_model = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle)
+  return data_list_ready_for_model
 
 
 def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1):
@@ -36,11 +36,15 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 100):
     for epoch in range (num_epochs):
         for i, (past, current) in enumerate (train_loader):
             input = past.float().flatten() # (24,)
-            current = current.float().flatten()
+            current = current.float().flatten() #(6,)
+            # print("current shape:", current.shape, current.type())
+            
+            out = model(input) # (1,)
 
-            out = model(input)
+            # print("out shape:", out.shape, out.type(), out.item())
+            # print("current-1 shape:", current[-1].unsqueeze(dim=0).shape, current[-1].type(), current[-1].item())
 
-            loss = loss_func (current, out)
+            loss = loss_func (current[-1].unsqueeze(dim=0), out)
             losses.append (loss.item())
 
             optimizer.zero_grad()
@@ -65,15 +69,22 @@ def test(model, test_loader):
     test_losses = []
     test_loss = 0
     loss_func = nn.MSELoss()
+    model_output = []
+    ground_truth = []
    
     with torch.no_grad():
         for i, (past, current) in enumerate (test_loader):
+            print(i)
             input = past.float().flatten() # (24,)
             current = current.float().flatten()
-
+            # print("current:", current)
+            # print("current-1:", current[-1])
             out = model(input)
-
-            loss = loss_func (current, out)
+            # print("out shape:", out.shape, out.type(), out.item())
+            # print("current shape:", current[-1].shape, current.type(), current[-1].item())
+            model_output.append (out.item())
+            ground_truth.append (current[-1].item())
+            loss = loss_func (current[-1].unsqueeze(dim=0), out)
             test_losses.append (loss.item())
 
             test_loss += loss.item()
@@ -82,5 +93,15 @@ def test(model, test_loader):
     print("Total test loss:", test_loss)
     plt.plot (test_losses)
     plt.title("Loss Plot")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss");
+    plt.xlabel("Timesteps")
+    plt.ylabel("Loss")
+    plt.show();
+
+    # Plot model output and ground truth
+    plt.plot (model_output, label = "Model Output")
+    plt.plot (ground_truth, label = "Ground Truth")
+    plt.title("Model Output vs Ground Truth")
+    plt.xlabel("Timesteps")
+    plt.ylabel("Temperature (C)")
+    plt.legend()
+    plt.show();

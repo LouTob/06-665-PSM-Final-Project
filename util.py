@@ -14,7 +14,8 @@ def GenerateRandomF_agInput(num_timesteps=500, plot=False):
     F_ag_random_sequence = []
     i = 0
     while i < num_timesteps:
-        if i+1 % random.randint(5, 50) == 0:
+        k = i+1
+        if k % random.randint(5, 50) == 0:
             F_ag_random_sequence.append(random.randint(80, 200))
             temp_stable_input = random.randint(0, 20)
             temp_stable_input_length = random.randint(3,40)
