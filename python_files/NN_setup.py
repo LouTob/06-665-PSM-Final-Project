@@ -93,7 +93,7 @@ def test(model, test_loader):
     print("Total test loss:", test_loss)
     plt.plot (test_losses)
     plt.title("Loss Plot")
-<<<<<<<< HEAD:NNPreprocessingAndStructure.py
+
     plt.xlabel("Timesteps")
     plt.ylabel("Loss")
     plt.show();
@@ -105,8 +105,7 @@ def test(model, test_loader):
     plt.xlabel("Timesteps")
     plt.ylabel("Temperature (C)")
     plt.legend()
-    plt.show();
-========
+    plt.show()
     plt.xlabel("Epochs")
     plt.ylabel("Loss");
->>>>>>>> e18467be2604fdbba0702460b956d71418f32dd6:python/NN preprocessing and structure.py
+

@@ -2,9 +2,9 @@
 import os
 from os.path import join
 import numpy as np
-from precomputed import * # PRECOMPUTED PARAMETERS DEFINED HERE
-from util import generate_inputs, plot_ode_solutions
-from ODE import generate_ode_data
+from .precomputed import * # PRECOMPUTED PARAMETERS DEFINED HERE
+from .util import generate_inputs, plot_ode_solutions
+from .ODE import generate_ode_data
 
 
 # ===============================================================================================================================================

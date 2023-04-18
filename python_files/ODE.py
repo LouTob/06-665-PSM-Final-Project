@@ -1,9 +1,9 @@
 # ===============================================================================================================================================
 import numpy as np
 from scipy.integrate import solve_ivp
-from precomputed import * # PRECOMPUTED PARAMETERS DEFINED HERE
-from util import GenerateRandomF_agInput
 
+from .util import GenerateRandomF_agInput
+from .precomputed import * # PRECOMPUTED PARAMETERS DEFINED HERE
 
 # ===============================================================================================================================================
 # NOTE: ODE and Solver
