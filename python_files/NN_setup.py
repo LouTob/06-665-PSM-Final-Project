@@ -40,28 +40,34 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
     loss_func = nn.MSELoss()
     optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
     losses = []
-
+    j = 0
     for epoch in range (num_epochs):
-        for i, (past, current) in enumerate (train_loader):
-            print(i)
-            input = past.float().flatten() # (24,)
-            current = current.float().flatten() #(6,)
-            # print("current shape:", current.shape, current.type())
-            
-            out = model(input) # (1,)
+        for n, data in enumerate (train_loader):
+            print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
+            for i in range(data.shape[1]):
+                # print("i:", i)
 
-            # print("out shape:", out.shape, out.type(), out.item())
-            # print("current-1 shape:", current[-1].unsqueeze(dim=0).shape, current[-1].type(), current[-1].item())
+                prev_4_states = data[0, i, :-1].float().flatten()
+                # print("prev_4_states size", prev_4_states.size())
 
-            loss = loss_func (current[-1].unsqueeze(dim=0), out)
-            losses.append (loss.item())
+                current_temp = data[0, i, -1].float().flatten()
+                # print("current_state size", current_temp.size())
+                
+                predicted_current_temp = model(prev_4_states) # (1,)
+                print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp.item())
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                loss = loss_func (current_temp, predicted_current_temp)
+                losses.append (loss.item())
 
-
-            print (f"iter {i} | loss = {loss}")
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                j+=1
+                if j % 100 == 0:
+                    print(f"Global iterations {j} | loss = {loss}")
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch} | loss = {loss}")
+             
     plt.plot (losses)
     plt.title("Loss Plot")
     plt.xlabel("Epochs")
@@ -82,21 +88,28 @@ def test(model, test_loader):
     ground_truth = []
    
     with torch.no_grad():
-        for i, (past, current) in enumerate (test_loader):
-            print(i)
-            input = past.float().flatten() # (24,)
-            current = current.float().flatten()
-            # print("current:", current)
-            # print("current-1:", current[-1])
-            out = model(input)
-            # print("out shape:", out.shape, out.type(), out.item())
-            # print("current shape:", current[-1].shape, current.type(), current[-1].item())
-            model_output.append (out.item())
-            ground_truth.append (current[-1].item())
-            loss = loss_func (current[-1].unsqueeze(dim=0), out)
-            test_losses.append (loss.item())
+        for n, data in enumerate (test_loader):
+            print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
+            for i in range(data.shape[1]):
+                # print("i:", i)
 
-            test_loss += loss.item()
+                prev_4_states = data[0, i, :-1].float().flatten()
+                # print("prev_4_states size", prev_4_states.size())
+
+                current_temp = data[0, i, -1].float().flatten()
+                # print("current_state size", current_temp.size())
+                
+                predicted_current_temp = model(prev_4_states) # (1,)
+
+                loss = loss_func (current_temp[-1].unsqueeze(dim=0), predicted_current_temp)
+                model_output.append (predicted_current_temp.item())
+                ground_truth.append (current_temp[0].item())
+                print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
+                
+                loss = loss_func (current_temp[0].item(), predicted_current_temp.item())
+                test_losses.append (loss.item())
+
+                test_loss += loss.item()
     test_loss = test_loss / len(test_loader)
     
     print("Total test loss:", test_loss)
