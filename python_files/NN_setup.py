@@ -1,15 +1,24 @@
 from torch.utils.data import DataLoader
 
 
-def data_preprocessing(dataset, batch_size = 1, shuffle = False):
+def data_preprocessing(dataset, N, num_timesteps, batch_size = 1, shuffle = False):
   from torch.utils.data import DataLoader
-  data_list = []
-  for i, data in enumerate(dataset):
-    features = data[:, i:i+4].T # 0,1,2,3th states (4,6)
-    label = data[:, i+4] # 4th states (6,)
-    data_list.append ((features,label))
-  data_list_ready_for_model = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle)
-  return data_list_ready_for_model
+  import numpy as np
+  data_list_total = np.zeros((N, num_timesteps-3, 9))
+  print("pre-processing data...")
+  for n, data in enumerate(dataset):
+    print("n:", n, "data shape:", dataset.shape)
+        
+    for i in range(4, 7, 1):
+        # features = data[:4, i-4:i].T # 0,1,2,3th states (4,6)
+        prev_4_reactor_temps = data[4, i-4:i] # (1,4)
+        prev_4_F_ag = data[6, i-4:i] # (1,4)
+        current_temp = data[4, i] # 4th state (1,)
+        data_list_total[n, i-4, 0:4] = prev_4_reactor_temps
+        data_list_total[n, i-4, 4:8] = prev_4_F_ag
+        data_list_total[n, i-4, 8] = current_temp
+    data_list_ready_for_model = DataLoader(data_list_total, batch_size=batch_size, shuffle=shuffle)
+    return data_list_ready_for_model
 
 
 def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1):
@@ -24,17 +33,17 @@ def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size 
     model = nn.Sequential(*layers)
     return model
 
-def train(model, train_loader, optimizer = "Adam", num_epochs = 100):
+def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
     import torch.nn as nn
     import torch
     import matplotlib.pyplot as plt
     loss_func = nn.MSELoss()
     optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
-    num_epochs = 5
     losses = []
 
     for epoch in range (num_epochs):
         for i, (past, current) in enumerate (train_loader):
+            print(i)
             input = past.float().flatten() # (24,)
             current = current.float().flatten() #(6,)
             # print("current shape:", current.shape, current.type())
