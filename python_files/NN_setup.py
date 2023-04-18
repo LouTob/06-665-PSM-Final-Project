@@ -9,20 +9,27 @@ def data_preprocessing(dataset, N, num_timesteps, batch_size = 1, shuffle = Fals
   for n, data in enumerate(dataset):
     print("n:", n, "data shape:", dataset.shape)
         
-    for i in range(4, 7, 1):
+    for i in range(4, 500, 1):
         # features = data[:4, i-4:i].T # 0,1,2,3th states (4,6)
         prev_4_reactor_temps = data[4, i-4:i] # (1,4)
         prev_4_F_ag = data[6, i-4:i] # (1,4)
         current_temp = data[4, i] # 4th state (1,)
+        if i > 495:
+            print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
+        if i == 4:
+            print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
         data_list_total[n, i-4, 0:4] = prev_4_reactor_temps
         data_list_total[n, i-4, 4:8] = prev_4_F_ag
         data_list_total[n, i-4, 8] = current_temp
+        # if i > 495:
+        #     print("data_list_total[n, i-4, :]:", data_list_total[n, i-4, :])
     data_list_ready_for_model = DataLoader(data_list_total, batch_size=batch_size, shuffle=shuffle)
     return data_list_ready_for_model
 
 
 def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1):
     import torch.nn as nn
+    # this method enables us to add as many layers as num_hidden_layers
     layers = []
     layers.append(nn.Linear(input_size, hidden_size))
     layers.append(nn.ReLU())
@@ -44,7 +51,7 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
     for epoch in range (num_epochs):
         for n, data in enumerate (train_loader):
             print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
-            for i in range(data.shape[1]):
+            for i in range(data.shape[1]-1):
                 # print("i:", i)
 
                 prev_4_states = data[0, i, :-1].float().flatten()
@@ -54,7 +61,8 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
                 # print("current_state size", current_temp.size())
                 
                 predicted_current_temp = model(prev_4_states) # (1,)
-                print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp.item())
+                if i > 493:
+                    print("i: ",i,"predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp.item())
 
                 loss = loss_func (current_temp, predicted_current_temp)
                 losses.append (loss.item())
@@ -90,7 +98,7 @@ def test(model, test_loader):
     with torch.no_grad():
         for n, data in enumerate (test_loader):
             print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
-            for i in range(data.shape[1]):
+            for i in range(data.shape[1]-1):
                 # print("i:", i)
 
                 prev_4_states = data[0, i, :-1].float().flatten()
@@ -101,12 +109,11 @@ def test(model, test_loader):
                 
                 predicted_current_temp = model(prev_4_states) # (1,)
 
-                loss = loss_func (current_temp[-1].unsqueeze(dim=0), predicted_current_temp)
                 model_output.append (predicted_current_temp.item())
                 ground_truth.append (current_temp[0].item())
                 print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
                 
-                loss = loss_func (current_temp[0].item(), predicted_current_temp.item())
+                loss = loss_func (current_temp, predicted_current_temp)
                 test_losses.append (loss.item())
 
                 test_loss += loss.item()
