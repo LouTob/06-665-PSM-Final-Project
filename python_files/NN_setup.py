@@ -117,7 +117,7 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
                     test_loss += loss.item()
                 epoch_test_loss_list_mean_per_simulation.append(np.mean(test_loss_list_per_simulation))
 
-        print(f"Epoch {epoch} | Epoch mean test loss for a single simulation = {np.mean(epoch_train_loss_list_mean_per_simulation)}")
+        print(f"Epoch {epoch} | Epoch mean test loss for a single simulation = {np.mean(epoch_test_loss_list_mean_per_simulation)}")
         overall_test_loss_list_one_value_per_epoch.append(np.mean(epoch_test_loss_list_mean_per_simulation))
 
         # Generate one plot sample for each epoch
