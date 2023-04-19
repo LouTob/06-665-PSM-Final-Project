@@ -2,27 +2,27 @@ from torch.utils.data import DataLoader
 
 
 def data_preprocessing(dataset, N, num_timesteps, batch_size = 1, shuffle = False):
-  from torch.utils.data import DataLoader
-  import numpy as np
-  data_list_total = np.zeros((N, num_timesteps-3, 9))
-  print("pre-processing data...")
-  for n, data in enumerate(dataset):
-    print("n:", n, "data shape:", dataset.shape)
-        
-    for i in range(4, 500, 1):
-        # features = data[:4, i-4:i].T # 0,1,2,3th states (4,6)
-        prev_4_reactor_temps = data[4, i-4:i] # (1,4)
-        prev_4_F_ag = data[6, i-4:i] # (1,4)
-        current_temp = data[4, i] # 4th state (1,)
-        if i > 495:
-            print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
-        if i == 4:
-            print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
-        data_list_total[n, i-4, 0:4] = prev_4_reactor_temps
-        data_list_total[n, i-4, 4:8] = prev_4_F_ag
-        data_list_total[n, i-4, 8] = current_temp
-        # if i > 495:
-        #     print("data_list_total[n, i-4, :]:", data_list_total[n, i-4, :])
+    from torch.utils.data import DataLoader
+    import numpy as np
+    data_list_total = np.zeros((N, num_timesteps-3, 9))
+    print("pre-processing data... with N = ", N)
+    for n in range(0, N, 1):
+        print("n:", n, "of", N, "dataset shape:", dataset.shape)
+        i = 0    
+        for i in range(4, 500, 1):
+            # features = data[:4, i-4:i].T # 0,1,2,3th states (4,6)
+            prev_4_reactor_temps = dataset[n, 4, i-4:i] # (1,4)
+            prev_4_F_ag = dataset[n, 6, i-4:i] # (1,4)
+            current_temp = dataset[n, 4, i] # 4th state (1,)
+            if i > 495:
+                print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
+            if i == 4:
+                print("i:", i, "prev_4_reactor_temps:", prev_4_reactor_temps, "prev_4_F_ag:", prev_4_F_ag, "current_temp:", current_temp)
+            data_list_total[n, i-4, 0:4] = prev_4_reactor_temps
+            data_list_total[n, i-4, 4:8] = prev_4_F_ag
+            data_list_total[n, i-4, 8] = current_temp
+            # if i > 495:
+            #     print("data_list_total[n, i-4, :]:", data_list_total[n, i-4, :])
     data_list_ready_for_model = DataLoader(data_list_total, batch_size=batch_size, shuffle=shuffle)
     return data_list_ready_for_model
 
