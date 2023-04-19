@@ -152,8 +152,8 @@ def test(model, test_loader):
             plt.show();
 
             # Plot model output and ground truth
-            plt.plot(model_output, label = "Model Output")
             plt.plot(ground_truth, label = "Ground Truth")
+            plt.plot(model_output, label = "Model Output")
             plt.title(f"Model Output vs Ground Truth for set n = {n}")
             plt.xlabel("Timesteps")
             plt.ylabel("Temperature (C)")
