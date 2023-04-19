@@ -27,7 +27,7 @@ def data_preprocessing(dataset, N, num_timesteps, batch_size = 1, shuffle = Fals
     return data_list_ready_for_model
 
 
-def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1):
+def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1, dropout_rate = 0.0):
     import torch.nn as nn
     import torch
     # this method enables us to add as many layers as num_hidden_layers
@@ -37,6 +37,7 @@ def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size 
     for i in range(num_hidden_layers):
         layers.append(nn.Linear(hidden_size, hidden_size))
         layers.append(nn.ReLU())
+        layers.append(nn.Dropout(dropout_rate))
     layers.append(nn.Linear(hidden_size, output_size))
     model = nn.Sequential(*layers)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,12 +52,15 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     loss_func = nn.MSELoss()
     optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
-    train_losses = []
+    epoch_train_loss_list_mean_per_simulation = []
+    overall_train_loss_list_one_value_per_epoch = []
     j = 0
     for epoch in range (num_epochs):
         model.train()
+        print("Train epoch:", epoch)
         for n, data in enumerate (train_loader):
             # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
+            train_loss_list_per_simulation = []
             for i in range(data.shape[1]-1):
                 # print("i:", i)
 
@@ -67,11 +71,8 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
                 # print("current_state size", current_temp.size())
                 
                 predicted_current_temp = model(prev_4_states) # (1,)
-                # if i > 493:
-                #     print("i: ",i,"predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp.item())
-
                 loss = loss_func (current_temp, predicted_current_temp)
-                train_losses.append (loss.item())
+                train_loss_list_per_simulation.append (loss.item())
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -79,19 +80,22 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
                 j+=1
                 # if j % 1000 == 0:
                     # print(f"Global iterations {j} | loss = {loss}")
-        if epoch % 2 == 0:
-            print(f"Epoch {epoch} | Epoch mean training loss = {np.mean(train_losses)}")
-        model_output = []
-        ground_truth = []
-        test_losses = []
+            epoch_train_loss_list_mean_per_simulation.append(np.mean(train_loss_list_per_simulation))
+        if epoch % 1 == 0:
+            print(f"Epoch {epoch} | Epoch mean training loss for a single simulation = {np.mean(epoch_train_loss_list_mean_per_simulation)}")
+        overall_train_loss_list_one_value_per_epoch.append(np.mean(epoch_train_loss_list_mean_per_simulation))
+        epoch_test_loss_list_mean_per_simulation = []
+        overall_test_loss_list_one_value_per_epoch = []
+
         model = model.eval()
-        
+        print("Test epoch:", epoch)
+        test_loss = 0
         with torch.no_grad():
             for n, data in enumerate (test_loader):
                 # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
                 model_output = []
                 ground_truth = []
-                test_losses = []
+                test_loss_list_per_simulation = []
                 for i in range(data.shape[1]-1):
                     # print("i:", i)
 
@@ -108,55 +112,57 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
                     # print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
                     
                     loss = loss_func (current_temp, predicted_current_temp)
-                    test_losses.append (loss.item())
+                    test_loss_list_per_simulation.append(loss.item())
 
                     test_loss += loss.item()
-                test_loss = test_loss / len(test_loader)
-                
-                print("Epoch:", {epoch}, "Total test loss for set", n, "is", test_loss)
+                epoch_test_loss_list_mean_per_simulation.append(np.mean(test_loss_list_per_simulation))
 
-                pred_error = []
-                for i in range(len(model_output)):
-                    pred_error.append(ground_truth[i] - model_output[i])
-                plt.plot(pred_error)
-                plt.title(f"Prediction error (ground truth - prediction) for set n = {n}")
-                plt.xlabel("Timesteps")
-                plt.ylabel("Error")
-                plt.show();
+        print(f"Epoch {epoch} | Epoch mean test loss for a single simulation = {np.mean(epoch_train_loss_list_mean_per_simulation)}")
+        overall_test_loss_list_one_value_per_epoch.append(np.mean(epoch_test_loss_list_mean_per_simulation))
 
-                # Plot model output and ground truth
-                plt.plot(ground_truth, label = "Ground Truth")
-                plt.plot(model_output, label = "Model Output")
-                plt.title(f"Model Output vs Ground Truth for set n = {n}")
-                plt.xlabel("Timesteps")
-                plt.ylabel("Temperature (C)")
-                plt.legend()
-                plt.show();
-        
-        
-        
-        
-        
-        plt.plot (train_losses)
-        plt.title("Loss Plot")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.show();         
-        
-        plt.plot (train_losses)
-        plt.title("Loss Plot")
-        plt.yscale("log")   
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.show(); 
+        # Generate one plot sample for each epoch
+        pred_error = []
+        for i in range(len(model_output)):
+            pred_error.append(ground_truth[i] - model_output[i])
+        plt.plot(pred_error)
+        plt.title(f"Prediction error (ground truth - prediction) for set n = {n}")
+        plt.xlabel("Timesteps")
+        plt.ylabel("Error")
+        plt.show();
 
-        plt.plot (train_losses)
-        plt.title("Loss Plot")
-        plt.yscale("log") 
-        plt.xscale("log")  
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.show(); 
+        # Plot model output and ground truth
+        plt.plot(ground_truth, label = "Ground Truth")
+        plt.plot(model_output, label = "Model Output")
+        plt.title(f"Model Output vs Ground Truth for set n = {n}")
+        plt.xlabel("Timesteps")
+        plt.ylabel("Temperature (C)")
+        plt.legend()
+        plt.show();
+      
+        
+      
+    # Plot loss
+    plt.plot(overall_train_loss_list_one_value_per_epoch, label = "Train Loss")
+    plt.plot (overall_test_loss_list_one_value_per_epoch, label = "Test Loss")
+    plt.title("Loss Plot")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.show();         
+        
+        # plt.plot (train_losses)
+        # plt.title("Loss Plot")
+        # plt.yscale("log")   
+        # plt.xlabel("Epochs")
+        # plt.ylabel("Loss")
+        # plt.show(); 
+
+        # plt.plot (train_losses)
+        # plt.title("Loss Plot")
+        # plt.yscale("log") 
+        # plt.xscale("log")  
+        # plt.xlabel("Epochs")
+        # plt.ylabel("Loss")
+        # plt.show(); 
     return
 def test(model, test_loader):
     """
