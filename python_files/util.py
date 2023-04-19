@@ -15,16 +15,28 @@ def GenerateRandomF_agInput(num_timesteps=500, plot=False):
     i = 0
     while i < num_timesteps:
         k = i+1
-        if k % random.randint(5, 50) == 0:
-            F_ag_random_sequence.append(random.randint(80, 200))
-            temp_stable_input = random.randint(0, 20)
-            temp_stable_input_length = random.randint(3,40)
+        if k % random.randint(3, 10) == 0:
+            spike = random.randint(80, 200)
+            F_ag_random_sequence.append(spike)
+            F_ag_random_sequence.append(spike/2)
+            F_ag_random_sequence.append(spike/2.5)
+            F_ag_random_sequence.append(spike/3)
+            F_ag_random_sequence.append(spike/3.5)
+            F_ag_random_sequence.append(spike/4)
+            i+=6
+            temp_stable_input = int(spike/5)
+            temp_stable_input_length = random.randint(12,40)
             for j in range(temp_stable_input_length):
-                F_ag_random_sequence.append(temp_stable_input)
-            i += temp_stable_input_length
+                F_ag_random_sequence.append(random.randint(temp_stable_input-1, \
+                                                            temp_stable_input+1))
+                i += 1
         else:
-            F_ag_random_sequence.append(random.randint(0, 20))
-            i += 1
+            valley = random.randint(0, 20)
+            valley_length = random.randint(0,3)
+            for l in range(valley_length):
+                F_ag_random_sequence.append(random.randint(valley-1, \
+                                                            valley+1))
+                i += 1
 
     # shape (>num_timesteps,); Cut down to (num_timesteps,) in generate_ode_data
     F_ag_random_sequence = np.array(F_ag_random_sequence).astype(float)
@@ -109,4 +121,23 @@ def plot_ode_solutions (solutions):
     ax[2].set_title (r"$T_r$ [K]")
     ax[3].set_title (r"$T_{ag}$ [K]")
     plt.show ()
+# ===============================================================================================================================================
+
+# ===============================================================================================================================================
+# NOTE: Plot input and output sequences like Figure 12 on page 104
+def plot_input_output(F_ag_array, solutions,N):
+    for i in range(N):
+        plt.figure(figsize = (10,4))
+        plt.title(f"Input Sequence {i+1}")
+        plt.xlabel("time")
+        plt.ylabel("F_ag")
+        plt.plot(F_ag_array[i,:])
+        plt.show()
+
+        plt.figure(figsize=(10,4))
+        plt.title(f"Output Sequence {i+1}")
+        plt.xlabel("time")
+        plt.ylabel("T (deg C)")
+        plt.plot(solutions[i][-2].T - 273.15)
+        plt.show()
 # ===============================================================================================================================================
