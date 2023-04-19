@@ -43,7 +43,7 @@ def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size 
     model.to(device)
     return model
 
-def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
+def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epochs = 1):
     import torch.nn as nn
     import torch
     import matplotlib.pyplot as plt
@@ -51,9 +51,10 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     loss_func = nn.MSELoss()
     optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
-    losses = []
+    train_losses = []
     j = 0
     for epoch in range (num_epochs):
+        model.train()
         for n, data in enumerate (train_loader):
             # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
             for i in range(data.shape[1]-1):
@@ -70,7 +71,7 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
                 #     print("i: ",i,"predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp.item())
 
                 loss = loss_func (current_temp, predicted_current_temp)
-                losses.append (loss.item())
+                train_losses.append (loss.item())
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -79,28 +80,84 @@ def train(model, train_loader, optimizer = "Adam", num_epochs = 1):
                 # if j % 1000 == 0:
                     # print(f"Global iterations {j} | loss = {loss}")
         if epoch % 2 == 0:
-            print(f"Epoch {epoch} | Epoch mean loss = {np.mean(losses)}")
-    plt.plot (losses)
-    plt.title("Loss Plot")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.show();         
-    
-    plt.plot (losses)
-    plt.title("Loss Plot")
-    plt.yscale("log")   
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.show(); 
+            print(f"Epoch {epoch} | Epoch mean training loss = {np.mean(train_losses)}")
+        model_output = []
+        ground_truth = []
+        test_losses = []
+        model = model.eval()
+        
+        with torch.no_grad():
+            for n, data in enumerate (test_loader):
+                # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
+                model_output = []
+                ground_truth = []
+                test_losses = []
+                for i in range(data.shape[1]-1):
+                    # print("i:", i)
 
-    plt.plot (losses)
-    plt.title("Loss Plot")
-    plt.yscale("log") 
-    plt.xscale("log")  
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.show(); 
+                    prev_4_states = data[0, i, :-1].float().flatten().to(device)
+                    # print("prev_4_states size", prev_4_states.size())
 
+                    current_temp = data[0, i, -1].float().flatten().to(device)
+                    # print("current_state size", current_temp.size())
+                    
+                    predicted_current_temp = model(prev_4_states) # (1,)
+
+                    model_output.append (predicted_current_temp.item()-273.15)
+                    ground_truth.append (current_temp[0].item()-273.15)
+                    # print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
+                    
+                    loss = loss_func (current_temp, predicted_current_temp)
+                    test_losses.append (loss.item())
+
+                    test_loss += loss.item()
+                test_loss = test_loss / len(test_loader)
+                
+                print("Epoch:", {epoch}, "Total test loss for set", n, "is", test_loss)
+
+                pred_error = []
+                for i in range(len(model_output)):
+                    pred_error.append(ground_truth[i] - model_output[i])
+                plt.plot(pred_error)
+                plt.title(f"Prediction error (ground truth - prediction) for set n = {n}")
+                plt.xlabel("Timesteps")
+                plt.ylabel("Error")
+                plt.show();
+
+                # Plot model output and ground truth
+                plt.plot(ground_truth, label = "Ground Truth")
+                plt.plot(model_output, label = "Model Output")
+                plt.title(f"Model Output vs Ground Truth for set n = {n}")
+                plt.xlabel("Timesteps")
+                plt.ylabel("Temperature (C)")
+                plt.legend()
+                plt.show();
+        
+        
+        
+        
+        
+        plt.plot (train_losses)
+        plt.title("Loss Plot")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.show();         
+        
+        plt.plot (train_losses)
+        plt.title("Loss Plot")
+        plt.yscale("log")   
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.show(); 
+
+        plt.plot (train_losses)
+        plt.title("Loss Plot")
+        plt.yscale("log") 
+        plt.xscale("log")  
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.show(); 
+    return
 def test(model, test_loader):
     """
     This function tests the model on the test set
