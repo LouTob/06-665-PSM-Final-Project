@@ -49,15 +49,20 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
     import torch
     import matplotlib.pyplot as plt
     import numpy as np
+    import time
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     loss_func = nn.MSELoss()
     optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
+    
     epoch_train_loss_list_mean_per_simulation = []
     overall_train_loss_list_one_value_per_epoch = []
+    overall_test_loss_list_one_value_per_epoch = []
     j = 0
+    start_time = time.time()  
     for epoch in range (num_epochs):
+        epoch = epoch + 1
         model.train()
-        print("Train epoch:", epoch)
+        
         for n, data in enumerate (train_loader):
             # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
             train_loss_list_per_simulation = []
@@ -85,10 +90,9 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
             print(f"Epoch {epoch} | Epoch mean training loss for a single simulation = {np.mean(epoch_train_loss_list_mean_per_simulation)}")
         overall_train_loss_list_one_value_per_epoch.append(np.mean(epoch_train_loss_list_mean_per_simulation))
         epoch_test_loss_list_mean_per_simulation = []
-        overall_test_loss_list_one_value_per_epoch = []
-
+        
         model = model.eval()
-        print("Test epoch:", epoch)
+        
         test_loss = 0
         with torch.no_grad():
             for n, data in enumerate (test_loader):
@@ -112,9 +116,7 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
                     # print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
                     
                     loss = loss_func (current_temp, predicted_current_temp)
-                    test_loss_list_per_simulation.append(loss.item())
-
-                    test_loss += loss.item()
+                    test_loss_list_per_simulation.append(loss.item())                
                 epoch_test_loss_list_mean_per_simulation.append(np.mean(test_loss_list_per_simulation))
 
         print(f"Epoch {epoch} | Epoch mean test loss for a single simulation = {np.mean(epoch_test_loss_list_mean_per_simulation)}")
@@ -140,15 +142,19 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
         plt.show();
       
         
-      
     # Plot loss
     plt.plot(overall_train_loss_list_one_value_per_epoch, label = "Train Loss")
-    plt.plot (overall_test_loss_list_one_value_per_epoch, label = "Test Loss")
+    plt.plot(overall_test_loss_list_one_value_per_epoch, label = "Test Loss")
+    plt.legend()
     plt.title("Loss Plot")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
-    plt.show();         
-        
+    plt.show();
+    # Evaluating time taken
+    end_time = time.time() 
+    elapsed_time = end_time - start_time          
+    print("Time per epoch = ", elapsed_time/num_epochs)
+    print("Total time = ", elapsed_time)
         # plt.plot (train_losses)
         # plt.title("Loss Plot")
         # plt.yscale("log")   
@@ -163,7 +169,8 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
         # plt.xlabel("Epochs")
         # plt.ylabel("Loss")
         # plt.show(); 
-    return
+    return overall_test_loss_list_one_value_per_epoch, elapsed_time
+
 def test(model, test_loader):
     """
     This function tests the model on the test set
