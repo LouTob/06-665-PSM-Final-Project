@@ -27,7 +27,7 @@ def data_preprocessing(dataset, N, num_timesteps, batch_size = 1, shuffle = Fals
     return data_list_ready_for_model
 
 
-def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size = 1, dropout_rate = 0.0):
+def NeuralNet(num_hidden_layers, input_size = 8, hidden_size = 64, output_size = 1, dropout_rate = 0.0):
     import torch.nn as nn
     import torch
     # this method enables us to add as many layers as num_hidden_layers
@@ -42,17 +42,26 @@ def NeuralNet(num_hidden_layers, input_size = 24, hidden_size = 64, output_size 
     model = nn.Sequential(*layers)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
+
     return model
 
-def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epochs = 1):
+def train_and_test(model, train_loader, test_loader, lr = 0.01, criterion = "MSE", optimizer = "Adam", num_epochs = 1):
     import torch.nn as nn
     import torch
     import matplotlib.pyplot as plt
     import numpy as np
     import time
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    loss_func = nn.MSELoss()
-    optimizer = torch.optim.Adam (model.parameters(), lr=0.01)
+
+    if criterion == "MSE":
+        loss_func = nn.MSELoss()
+    elif criterion == "MAE":
+        loss_func = nn.L1Loss()
+
+    if optimizer == "Adam":
+        optimizer = torch.optim.Adam (model.parameters(), lr=lr)
+    elif optimizer == "SGD":
+        optimizer = torch.optim.SGD (model.parameters(), lr=lr)
     
     epoch_train_loss_list_mean_per_simulation = []
     overall_train_loss_list_one_value_per_epoch = []
@@ -155,78 +164,9 @@ def train_and_test(model, train_loader, test_loader, optimizer = "Adam", num_epo
     elapsed_time = end_time - start_time          
     print("Time per epoch = ", elapsed_time/num_epochs)
     print("Total time = ", elapsed_time)
-        # plt.plot (train_losses)
-        # plt.title("Loss Plot")
-        # plt.yscale("log")   
-        # plt.xlabel("Epochs")
-        # plt.ylabel("Loss")
-        # plt.show(); 
 
-        # plt.plot (train_losses)
-        # plt.title("Loss Plot")
-        # plt.yscale("log") 
-        # plt.xscale("log")  
-        # plt.xlabel("Epochs")
-        # plt.ylabel("Loss")
-        # plt.show(); 
     return overall_test_loss_list_one_value_per_epoch, elapsed_time
 
-def test(model, test_loader):
-    """
-    This function tests the model on the test set
-    """
-    import torch.nn as nn
-    import torch
-    import matplotlib.pyplot as plt
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    test_losses = []
-    test_loss = 0
-    loss_func = nn.MSELoss()
-    model_output = []
-    ground_truth = []
-    model = model.eval()
-    model = model.to(device)
-    with torch.no_grad():
-        for n, data in enumerate (test_loader):
-            # print("n:", n, "data shape:", data.shape, "data.shape[1]:", data.shape[1])
-            for i in range(data.shape[1]-1):
-                # print("i:", i)
 
-                prev_4_states = data[0, i, :-1].float().flatten().to(device)
-                # print("prev_4_states size", prev_4_states.size())
 
-                current_temp = data[0, i, -1].float().flatten().to(device)
-                # print("current_state size", current_temp.size())
-                
-                predicted_current_temp = model(prev_4_states) # (1,)
-
-                model_output.append (predicted_current_temp.item()-273.15)
-                ground_truth.append (current_temp[0].item()-273.15)
-                # print("predicted_current_temp:", predicted_current_temp.item(), "ground_truth:", current_temp[0].item())
-                
-                loss = loss_func (current_temp, predicted_current_temp)
-                test_losses.append (loss.item())
-
-                test_loss += loss.item()
-            test_loss = test_loss / len(test_loader)
-            
-            print("Total test loss for set n =", n, "is", test_loss)
-
-            pred_error = []
-            for i in range(len(model_output)):
-                pred_error.append(ground_truth[i] - model_output[i])
-            plt.plot(pred_error)
-            plt.title(f"Prediction error (ground truth - prediction) for set n = {n}")
-            plt.xlabel("Timesteps")
-            plt.ylabel("Error")
-            plt.show();
-
-            # Plot model output and ground truth
-            plt.plot(ground_truth, label = "Ground Truth")
-            plt.plot(model_output, label = "Model Output")
-            plt.title(f"Model Output vs Ground Truth for set n = {n}")
-            plt.xlabel("Timesteps")
-            plt.ylabel("Temperature (C)")
-            plt.legend()
-            plt.show();
 
